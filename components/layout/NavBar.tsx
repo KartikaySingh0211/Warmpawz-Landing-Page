@@ -1,18 +1,32 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import warmpawzLogo from "@/public/images/warmpawz-logo.svg";
-import { SCROLL } from "@/config/constants";
+import { SCROLL, STORAGE_KEYS } from "@/config/constants";
 import { AppLink } from "../shared/AppLink";
 import Image from "next/image";
 
 const Navbar = () => {
+	const pathname = usePathname();
 	const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 	const [isVisible, setIsVisible] = useState(true);
 	const [lastScrollY, setLastScrollY] = useState(0);
+	
+	// Initialize loading state based on pathname and sessionStorage
+	const [isLoading, setIsLoading] = useState(() => {
+		if (typeof window === "undefined") return false;
+		if (pathname === "/") {
+			const hasShownLoading = sessionStorage.getItem(
+				STORAGE_KEYS.hasShownLoading,
+			);
+			return hasShownLoading !== "true";
+		}
+		return false;
+	});
 
 	const isActive = (path: string) => {
-		return location.pathname === path;
+		return pathname === path;
 	};
 
 	const toggleMobileMenu = () => {
@@ -22,6 +36,23 @@ const Navbar = () => {
 	const closeMobileMenu = () => {
 		setIsMobileMenuOpen(false);
 	};
+
+	// Check if loading animation is active (only on home page)
+	useEffect(() => {
+		if (pathname === "/" && isLoading) {
+			// Check periodically if loading is done
+			const interval = setInterval(() => {
+				const updatedValue = sessionStorage.getItem(
+					STORAGE_KEYS.hasShownLoading,
+				);
+				if (updatedValue === "true") {
+					setIsLoading(false);
+					clearInterval(interval);
+				}
+			}, 100);
+			return () => clearInterval(interval);
+		}
+	}, [pathname, isLoading]);
 
 	// Handle scroll to show/hide navbar
 	useEffect(() => {
@@ -77,6 +108,11 @@ const Navbar = () => {
 			document.body.style.overflow = "";
 		};
 	}, [isMobileMenuOpen]);
+
+	// Don't render navbar during loading animation
+	if (isLoading) {
+		return null;
+	}
 
 	return (
 		<>
